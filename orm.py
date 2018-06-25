@@ -3,6 +3,9 @@
 # https://stackoverflow.com/questions/100003/what-are-metaclasses-in-python
 # https://www.fullstackpython.com/object-relational-mappers-orms.html (good)
 
+# https://github.com/aio-libs/aiomysql/issues/59
+# https://www.jianshu.com/p/b5e347b3a17c
+
 """
 Python做了如下的操作：
 
@@ -148,3 +151,22 @@ print('-------分割线-------')
 print(dir(User))
 print(u2.shilifun('gag'))
 print(u2.clsfun('gag'))
+
+
+# async def do_some_work(x):
+#     print('Waiting: ', x)
+
+
+# coroutine = do_some_work(2)
+
+
+# loop = asyncio.get_event_loop()
+# loop.run_until_complete(coroutine)
+
+
+##  await getData() ### 此时已经执行
+##  
+##
+##
+##
+##
