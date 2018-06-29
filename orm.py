@@ -6,6 +6,9 @@
 # https://github.com/aio-libs/aiomysql/issues/59
 # https://www.jianshu.com/p/b5e347b3a17c
 
+# http://blog.51cto.com/szgb17/2062283 (async orm demo)
+# http://www.luameows.wang/2018/03/09/%E5%88%9B%E7%AB%8BORM-%E5%BB%96%E9%9B%AA%E5%B3%B0python%E7%AC%94%E8%AE%B0/ (async orm demo)
+
 """
 Python做了如下的操作：
 
