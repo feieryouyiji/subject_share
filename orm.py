@@ -57,7 +57,7 @@ class ModelMeta(type):
         primary = None
         for k, v in attrs.iteritems():   # name(k) = Field('ffl')(v) age = IntField(32)
             if isinstance(v, Field):
-                print 'Found one field', k
+                print 'Found one field', k, v
                 mappings[k] = v
                 if v.primaryKey == True:
                     if primary == None:
@@ -69,12 +69,15 @@ class ModelMeta(type):
         if primary == None:
             raise RuntimeError("No primary key given.")
         print('mapping.keys start---->>>', attrs)
-        # for k in mappings.keys():
-        #     attrs.pop(k)
+        print('mapping', mappings)
+        print('attrs', attrs)
+        for k in mappings.keys():   #attrs 必须 删除 类属性,
+            attrs.pop(k)              #如果 User 类属性 不删除的话 u.name 会直接访问类属性, 而不是实例属性, 其实就是model 中的字典 
         escaped_fields = list(map(lambda x: "'%s'" % x, fields))
 
         print('escaped_fields==>', escaped_fields)
         # renew attrs
+
         attrs['__mappings__'] = mappings 
         attrs['__table__'] = tablename
         attrs['__primarykey__'] = primary 
@@ -94,10 +97,13 @@ class Model(dict):
     __table__ = 'Should not show'
 
     def __init__(self, **kw):
+        print('enter model init')
+        print(self, kw)
         super(Model, self).__init__(**kw)
 
     def __getattr__(self, key):
         try:
+            print('enter __getattr__', key)
             return self[key]
         except:
             raise AttributeError(r"'Dict' object has no attribute '%s'" % key)
@@ -137,13 +143,13 @@ class User(Model):
     def clsfun(cls, arg):
         print("cls" + arg)
 
-print 'Test relation fields Auto Finding:'
+print 'Test relation fields Auto Finding:---------'
 u = User()
-print
+print('u--->', u)
 
 print 'Test select sql command:'
 User.select(id=1)
-print
+
 
 print 'Test insert sql command:'
 u2 = User(student_id=3, name='blue', age=123)
@@ -151,25 +157,13 @@ u2.save()
 
 print('-------分割线-------')
 
-print(dir(User))
 print(u2.shilifun('gag'))
 print(u2.clsfun('gag'))
+print('this is will happen mircal')
+print(u2.name)
+print('this is will happen mircal')
 
+print(u2['name'])
+print(u2.__dict__)
 
-# async def do_some_work(x):
-#     print('Waiting: ', x)
-
-
-# coroutine = do_some_work(2)
-
-
-# loop = asyncio.get_event_loop()
-# loop.run_until_complete(coroutine)
-
-
-##  await getData() ### 此时已经执行
-##  
-##
-##
-##
-##
+print('User ', dir(User))
