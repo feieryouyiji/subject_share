@@ -6,18 +6,51 @@ from my_field import *
 # __setattr__ 是设置 key  eg: m.age= 21 , 会触发这个函数,但是 在这个函 数中继续 调用 m.age 会形成死循环, 可以使用 super.__setattr__
 
 # https://stackoverflow.com/questions/100003/what-are-metaclasses-in-python/6581949#6581949
+
+
 class ModelMetaClass(type):
 
     def __new__(cls, future_class_name, future_class_parents, future_class_attrs):
-        print('cls', cls)
-        print('name', future_class_name)
-        print('bases', future_class_parents)
-        print('----------')
-        print('attrs', future_class_attrs)
-        print('----------')
-        # if future_class_name == 'Model':
-        return type.__new__(cls, future_class_name, future_class_parents, future_class_attrs)
+        if future_class_name == 'Model':
+            return type.__new__(cls, future_class_name, future_class_parents, future_class_attrs)
 
+        mappings = {}  # 存储 表字段信息 tartget  找到 字段 信息 以及主键
+        fields = []
+        primary_key = None
+
+        tablename = future_class_attrs.get('__table__', None) or future_class_name  # 在 表 类中写__table__ 属性
+        for k, v in future_class_attrs.items():
+            if isinstance(v, Field):
+                mappings[k] = v
+                if v.is_primary_key:
+                    if primary_key:
+                        primary_key = k
+                    else:
+                        raise RuntimeError("Duplicate primary key: %s", k)
+
+        if not primary_key:
+            raise RuntimeError("there is no primary key")
+
+        # 如果不把类属性 上与实例 同名属性删除 , s.age 访问的永远是 类属性, 其实就是 Field 实例
+        for key in mappings.keys():
+            future_class_attrs.pop(key)
+
+        # 如果不把 fields 再包 一层 字符串 的话, 构造 sql 的 时候 就 不会有引号 "select 'student_id', 'name','age' from 'User_table'"
+        escaped_fields = list(map(lambda x: "'%s'" % x, fields))
+
+        # 重新 构造 类 新 的属性
+        future_class_attrs['__mappings__'] = mappings
+        future_class_attrs['__table__'] = tablename
+        future_class_attrs['__primarykey__'] = primary_key
+        future_class_attrs['__fields__'] = fields
+
+        # 构造 CURD sql 语句
+        future_class_attrs['__select__'] = "select '%s', %s, from '%s'" % (primary, ','.join(escaped_fields), tablename)
+        future_class_attrs['__insert__'] = "insert '%s', %s, from '%s'" % (primary, ','.join(escaped_fields), tablename)
+        # attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
+        # 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
+
+        
 class Model(object, metaclass=ModelMetaClass):
 
     """
@@ -25,7 +58,6 @@ class Model(object, metaclass=ModelMetaClass):
     """
     # def __new__(cls, *args, **kwargs):
     #     return super().__new__(cls, *args, **kwargs)
-        
 
     def __init__(self, **kwargs):
         print('enter __init', kwargs)
@@ -44,18 +76,7 @@ class Model(object, metaclass=ModelMetaClass):
         self[key] = value
 
 
-class My(Model):
 
-    name = StringField("name")
-
-
-my = My(name="test")
-print('my==>', my)
-print('my==>', my.name)
-print('======')
-print('my', my.__dict__)
-print('My', My.__dict__)
-print('Model', Model.__dict__)
 
 
 ##########

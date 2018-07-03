@@ -6,9 +6,12 @@
 # https://github.com/aio-libs/aiomysql/issues/59
 # https://www.jianshu.com/p/b5e347b3a17c
 
+
 # http://blog.51cto.com/szgb17/2062283 (async orm demo)
 # http://www.luameows.wang/2018/03/09/%E5%88%9B%E7%AB%8BORM-%E5%BB%96%E9%9B%AA%E5%B3%B0python%E7%AC%94%E8%AE%B0/ (async orm demo)
 
+# https://www.jianshu.com/p/ac8a9bb57ec3  解答了为什么用元类
+#  https://github.com/wei-coder/mysql-test/blob/master/orm.py
 """
 Python做了如下的操作：
 
@@ -76,6 +79,7 @@ class ModelMeta(type):
         escaped_fields = list(map(lambda x: "'%s'" % x, fields))
 
         print('escaped_fields==>', escaped_fields)
+        print('fields1111==>', fields)
         # renew attrs
 
         attrs['__mappings__'] = mappings 
@@ -113,8 +117,10 @@ class Model(dict):
 
     @classmethod
     def select(cls, id):
+        # "select '%s', %s from '%s'" % (primary, ','.join(escaped_fields), tablename)
         print "%s where '%s' = %s;" % (cls.__select__, cls.__primarykey__, id)
-
+        
+        # "select %"
     def getValue(self, k):
         value = getattr(self, k, None)
         if value is None:
