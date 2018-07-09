@@ -23,7 +23,7 @@ class ModelMetaClass(type):
             if isinstance(v, Field):
                 mappings[k] = v
                 if v.is_primary_key:
-                    if primary_key:
+                    if not primary_key:
                         primary_key = k
                     else:
                         raise RuntimeError("Duplicate primary key: %s", k)
@@ -45,24 +45,19 @@ class ModelMetaClass(type):
         future_class_attrs['__fields__'] = fields
 
         # 构造 CURD sql 语句
-        future_class_attrs['__select__'] = "select '%s', %s, from '%s'" % (primary, ','.join(escaped_fields), tablename)
-        future_class_attrs['__insert__'] = "insert '%s', %s, from '%s'" % (primary, ','.join(escaped_fields), tablename)
+        future_class_attrs['__select__'] = "select '%s', %s, from '%s'" % (primary_key, ','.join(escaped_fields), tablename)
+        future_class_attrs['__insert__'] = "insert '%s', %s, from '%s'" % (primary_key, ','.join(escaped_fields), tablename)
         # attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         # 'insert into `%s` (%s, `%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
 
-        
-class Model(object, metaclass=ModelMetaClass):
+
+class Model(dict, metaclass=ModelMetaClass):
 
     """
-        实例属性在此init
+        继承 dict 的目的是为了方便 像字典一样 存取 属性值
     """
-    # def __new__(cls, *args, **kwargs):
-    #     return super().__new__(cls, *args, **kwargs)
-
     def __init__(self, **kwargs):
-        print('enter __init', kwargs)
         super(Model, self).__init__(**kwargs)
-        # self.name = kwargs['name']
 
     def __getattr__(self, key):
         try:
@@ -72,12 +67,15 @@ class Model(object, metaclass=ModelMetaClass):
             raise AttributeError(r"'Dict' object has no attribute '%s'" % key)
 
     def __setattr__(self, key, value):
-        print('enter setattr', key, value)
         self[key] = value
 
 
+class Student(Model):
 
+    __table__ = 'student'
 
+    name = StringField()
+    age = IntegerField(is_primary_key=True)
 
 ##########
 # class ModelMetaclass(type):
@@ -119,3 +117,9 @@ class Model(object, metaclass=ModelMetaClass):
 #         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
 #         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
 #         return type.__new__(cls, name, bases, attrs)
+
+# 只是为了Model编写方便，放在元类里和放在Model里都可以
+    # attrs['__select__']="select %s ,%s from %s " % (primaryKey,','.join(map(lambda f: '%s' % (mappings.get(f).name or f ),fields )),tableName)
+    # attrs['__update__']="update %s set %s where %s=?"  % (tableName,', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)),primaryKey)
+    # attrs['__insert__']="insert into %s (%s,%s) values (%s);" % (tableName,primaryKey,','.join(map(lambda f: '%s' % (mappings.get(f).name or f),fields)),create_args_string(len(fields)+1))
+    # attrs['__delete__']="delete from %s where %s= ? ;" % (tableName,primaryKey)

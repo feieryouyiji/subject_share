@@ -147,6 +147,7 @@ def create_args_string(num):
         L.append('?')
     return ', '.join(L)
 
+# user_name = StringField(ddl='varchar(50)', isNull='not null')
 class Field(object):
 
     def __init__(self, name, column_type, primary_key, default, isNull = None):

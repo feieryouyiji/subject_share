@@ -31,5 +31,5 @@ class StringField(Field):
     def __init__(self, name=None, sql_type='VARCHAR',
                  is_primary_key=False, default=''):
         super(StringField, self).__init__(name, sql_type, 
-                                           is_primary_key, default)
+                                          is_primary_key, default)
 
