@@ -13,8 +13,11 @@ async def init(loop):
         return
     try:
         # 创建 表
-        Student.create_self()
-
+        is_exist_db = await isExistTBL(db_config['db'], 'Student')
+        if not is_exist_db:
+            print('不存在')
+            await Student.create_self()
+        print('存在')
         s1 = Student(id=1, name="zs", age=10)
         await s1.save()
         #await blog.create_self()

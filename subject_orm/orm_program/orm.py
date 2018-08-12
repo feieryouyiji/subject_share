@@ -1,6 +1,14 @@
 from field import *
 from db import create_table, execute, select
 
+
+def create_args_string(num):
+    L = []
+    for n in range(num):
+        L.append('?')
+    return ', '.join(L)
+
+
 class ModelMetaClass(type):
 
     def __new__(cls, future_class_name, future_class_parents, future_class_attrs):
@@ -37,13 +45,13 @@ class ModelMetaClass(type):
         # 重新 构造 类 新 的属性
         future_class_attrs['__mappings__'] = mappings
         future_class_attrs['__table__'] = tablename
-        future_class_attrs['__primarykey__'] = primary_key
+        future_class_attrs['__primary_key__'] = primary_key
         future_class_attrs['__fields__'] = fields
 
 
         # 构造 CURD sql 语句
         future_class_attrs['__select__'] = "select `%s`, %s, from `%s`" % (primary_key, ','.join(escaped_fields), tablename)
-        future_class_attrs['__insert__'] = "insert '%s', %s, from '%s'" % (primary_key, ','.join(escaped_fields), tablename)
+        future_class_attrs['__insert__'] = 'insert into `%s` (%s,`%s`) VALUES (%s)'%(tablename, ', '.join(escaped_fields), primary_key, create_args_string(len(escaped_fields)+1))
         future_class_attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tablename, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primary_key)
         future_class_attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tablename, primary_key)
 
@@ -91,7 +99,7 @@ class Model(dict, metaclass=ModelMetaClass):
 
     async def save(self):
         try:
-            args = list(map(self.getValueOrDefault, self.__field__))
+            args = list(map(self.getValueOrDefault, self.__fields__))
             args.append(self.getValueOrDefault(self.__primary_key__))
             print(args)
             print(self.__insert__)
@@ -119,14 +127,17 @@ class Model(dict, metaclass=ModelMetaClass):
         if rows != 1:
             print('failed to remove record by primary key: affect rows:%s'%rows)
             
-            
-    async def create_self(self):
+    
+    @classmethod
+    async def create_self(cls):
         try:
             columns = []
-            for k, v in self.__mappings__.items():
-                columns.append('`%s` %s %s'%(k, v.column_type, v.isNull))
-            columns.append('primary key (`%s`)'%self.__primary_key__)
-            sql = 'create table %s (%s) engine=innodb default charset=utf8'%(self.__table__, ','.join(columns))    
+            for k, v in cls.__mappings__.items():
+                columns.append('`%s` %s %s'%(k, v.sql_type, v.is_null))
+                print('create_self columns', columns)
+            print('cls=>',cls)
+            columns.append('primary key (`%s`)'%cls.__primary_key__)
+            sql = 'create table %s (%s) engine=innodb default charset=utf8'%(cls.__table__, ','.join(columns))    
             await create_table(sql)
         except BaseException as e:
             raise e

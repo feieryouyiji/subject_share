@@ -45,6 +45,7 @@ async def drop_db(host, user, pw=None, name=None):
             
 
 async def create_table(sql):
+    print('create_table->', sql)
     global __pool                
     with (await __pool) as conn:
         try:
@@ -74,9 +75,25 @@ async def select(sql, args, size=None):
         logging.info('row return count:%s'%len(rs))
         return rs
 
+async def isExistTBL(db, table):
+    global __pool
+    with  (await __pool) as conn:
+        try:
+            cur = await conn.cursor(aiomysql.DictCursor)
+            await cur.execute('SELECT TABLE_NAME FROM information_schema.TABLES where TABLE_SCHEMA="%s" and TABLE_NAME="%s"'%(db,table))
+            rs = await cur.fetchall()
+            cur.close()
+            if rs:
+                return True
+            else:
+                return False
+        except BaseException as e:
+            print('judge table(%s:%s) whether exists is failed!\n error number %s:%s'%(db, table, e.args[0],e.args[1]))
+            return False
 
 async def execute(sql, args, autocommit=True):
-    log(sql)
+    print('excute sql', sql, args)
+    print('resplace', sql.replace('?', '%s'))
     global __pool
     with (await __pool) as conn:
         if not autocommit:

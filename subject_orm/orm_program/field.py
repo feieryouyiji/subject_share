@@ -8,10 +8,11 @@
 
 
 class Field(object):
-    def __init__(self, name, sql_type, is_primary_key, default):
+    def __init__(self, name, sql_type, is_primary_key, is_null, default):
         self.name = name
         self.sql_type = sql_type
         self.is_primary_key = is_primary_key
+        self.is_null = is_null
         self.default = default
 
     def __str__(self):
@@ -20,16 +21,16 @@ class Field(object):
 
 class IntegerField(Field):
 
-    def __init__(self, name=None, sql_type='INTEGER',
-                 is_primary_key=False, default=''):
+    def __init__(self, name=None, sql_type='bigint',
+                 is_primary_key=False, is_null='not null', default=''):
         super(IntegerField, self).__init__(name, sql_type, 
-                                           is_primary_key, default)
+                                           is_primary_key,is_null, default)
 
 
 class StringField(Field):
 
-    def __init__(self, name=None, sql_type='VARCHAR',
-                 is_primary_key=False, default=''):
+    def __init__(self, name=None, sql_type='varchar(100)',
+                 is_primary_key=False, is_null='not null', default=''):
         super(StringField, self).__init__(name, sql_type, 
-                                          is_primary_key, default)
+                                          is_primary_key,is_null, default)
 
