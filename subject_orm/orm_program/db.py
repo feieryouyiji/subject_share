@@ -1,9 +1,9 @@
 import aiomysql, asyncio
 
-print('aiomysql', aiomysql)
+
 async def create_pool(loop, **kw):
     print('create database connect pool..... ')
-    global  __pool
+    global __pool
     __pool = await aiomysql.create_pool(
         minsize = kw.get('minsize', 1),
         maxsize = kw.get('maxsize', 10),
@@ -42,7 +42,7 @@ async def drop_db(host, user, pw=None, name=None):
             print('create database failed, mysql error:%d:%s'%(e.args[0],e.args[1]))
         finally:
             cursor.close()
-            
+
 
 async def create_table(sql):
     print('create_table->', sql)
@@ -62,20 +62,20 @@ async def create_table(sql):
 
 
 async def select(sql, args, size=None):
-    log(sql,args)
+    print('sql, args', sql, args)
     global __pool
     with (await __pool) as conn:
         cur = await conn.cursor(aiomysql.DictCursor)
-        await cur.execute(sql.replace('?','%s'),args or ())
+        await cur.execute(sql.replace('?', '%s'), args or ())
         if size:
             rs = await cur.fetchmany(size)
         else:
             rs = await cur.fetchall()
         await cur.close()
-        logging.info('row return count:%s'%len(rs))
+        print('row return count:%s' % len(rs))
         return rs
 
-async def isExistTBL(db, table):
+async def is_exist_table(db, table):
     global __pool
     with  (await __pool) as conn:
         try:

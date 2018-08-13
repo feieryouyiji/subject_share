@@ -40,7 +40,8 @@ class ModelMetaClass(type):
             future_class_attrs.pop(key)
 
         # 如果不把 fields 再包 一层 字符串 的话, 构造 sql 的 时候 就 不会有引号 "select 'student_id', 'name','age' from 'User_table'"
-        escaped_fields = list(map(lambda x: "'%s'" % x, fields))
+        # escaped_fields = list(map(lambda f: r"%s" % f, fields))
+        escaped_fields = fields
 
         # 重新 构造 类 新 的属性
         future_class_attrs['__mappings__'] = mappings
@@ -50,8 +51,8 @@ class ModelMetaClass(type):
 
 
         # 构造 CURD sql 语句
-        future_class_attrs['__select__'] = "select `%s`, %s, from `%s`" % (primary_key, ','.join(escaped_fields), tablename)
-        future_class_attrs['__insert__'] = 'insert into `%s` (%s,`%s`) VALUES (%s)'%(tablename, ', '.join(escaped_fields), primary_key, create_args_string(len(escaped_fields)+1))
+        future_class_attrs['__select__'] = "select %s,%s from %s" % (primary_key, ','.join(escaped_fields), tablename)
+        future_class_attrs['__insert__'] = "insert into %s (%s, %s) VALUES (%s)" % (tablename, ', '.join(escaped_fields), primary_key, create_args_string(len(escaped_fields)+1))
         future_class_attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tablename, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primary_key)
         future_class_attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tablename, primary_key)
 
@@ -89,12 +90,40 @@ class Model(dict, metaclass=ModelMetaClass):
         return value
 
     @classmethod
-    async def find(cls,prikey):
-        sql = '%s where `%s`=?'%(cls.__select__, cls.__primary_key__)
-        rs = await select(sql,[prikey],1)
+    async def find(cls, prikey):
+        sql = '%s where %s = ?' % (cls.__select__, cls.__primary_key__)
+        rs = await select(sql, [prikey], 1)
         if len(rs) == 0:
             return None
         return cls(**rs[0])
+
+
+    @classmethod
+    async def find_all(cls, where=None, args=None, **kw):
+        sql = [cls.__select__]
+        if where:
+            sql.append('where')
+            sql.append(where)
+        if args is None:
+            args = []
+        orderBy = kw.get('orderBy',None)
+        if orderBy:
+            sql.append('order by')
+            sql.append(orderBy)
+        limit = kw.get('limit', None)
+        if limit:
+            sql.append('limit')
+            if isinstance(limit, int):
+                sql.append('?')
+                args.append(limit)
+            elif isinstance(limit, tuple) and len(limit) == 2:
+                sql.append('?,?')
+                args.extend(limit)
+            else:
+                raise ValueError('Invalid limit value: %s'%str(limit))
+        rs = await select(' '.join(sql),args)
+        return [cls(**r) for r in rs]
+
 
 
     async def save(self):
@@ -105,10 +134,10 @@ class Model(dict, metaclass=ModelMetaClass):
             print(self.__insert__)
             rows = await execute(self.__insert__, args)
             if rows != 1:
-                print('failed to insert record: affect rows: %s'%rows)
+                print('failed to insert record: affect rows: %s' % rows)
         except BaseException as e:
             raise e
-
+        print('save success')
 
     async def update(self):
         args = list(map(self.getValueOrDefault, self.__field__))
@@ -116,7 +145,7 @@ class Model(dict, metaclass=ModelMetaClass):
         try:
             rows = await execute(self.__update__, args)
             if rows != 1:
-                print('failed to update record: affect rows:%s'%rows)
+                print('failed to update record: affect rows:%s' % rows)
         except BaseException as e:
             raise e
 
@@ -125,9 +154,9 @@ class Model(dict, metaclass=ModelMetaClass):
         args = self.getValue(self.__primary_key__)
         rows = await execute(self.__delete__, args)
         if rows != 1:
-            print('failed to remove record by primary key: affect rows:%s'%rows)
-            
-    
+            print('failed to remove record by primary key: affect rows:%s' % rows)
+
+
     @classmethod
     async def create_self(cls):
         try:
@@ -136,8 +165,8 @@ class Model(dict, metaclass=ModelMetaClass):
                 columns.append('`%s` %s %s'%(k, v.sql_type, v.is_null))
                 print('create_self columns', columns)
             print('cls=>',cls)
-            columns.append('primary key (`%s`)'%cls.__primary_key__)
-            sql = 'create table %s (%s) engine=innodb default charset=utf8'%(cls.__table__, ','.join(columns))    
+            columns.append('primary key (`%s`)' % cls.__primary_key__)
+            sql = 'create table %s (%s) engine=innodb default charset=utf8' % (cls.__table__, ','.join(columns))
             await create_table(sql)
         except BaseException as e:
             raise e
