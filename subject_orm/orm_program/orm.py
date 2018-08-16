@@ -44,6 +44,7 @@ class ModelMetaClass(type):
         escaped_fields = fields
 
         # 重新 构造 类 新 的属性
+        print('fields-->', fields)
         future_class_attrs['__mappings__'] = mappings
         future_class_attrs['__table__'] = tablename
         future_class_attrs['__primary_key__'] = primary_key
@@ -97,7 +98,6 @@ class Model(dict, metaclass=ModelMetaClass):
             return None
         return cls(**rs[0])
 
-
     @classmethod
     async def find_all(cls, where=None, args=None, **kw):
         sql = [cls.__select__]
@@ -140,7 +140,7 @@ class Model(dict, metaclass=ModelMetaClass):
         print('save success')
 
     async def update(self):
-        args = list(map(self.getValueOrDefault, self.__field__))
+        args = list(map(self.getValueOrDefault, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
         try:
             rows = await execute(self.__update__, args)
